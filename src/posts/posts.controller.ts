@@ -4,13 +4,12 @@ import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { ApiQuery } from '@nestjs/swagger';
 import { User } from 'src/common/decorators/user.decorator';
-import { FileFieldsInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { PoliciesGuard } from 'src/casl/policies.guard';
 import { CheckPolicies } from 'src/casl/ability.decorator';
 import { Action } from 'src/casl/action.enum';
 import { CommonService } from 'src/common/services/common.service';
 import { Public } from 'src/common/decorators/public.decorator';
-import { Response } from 'express';
 
 @Controller('posts')
 export class PostsController {
@@ -40,6 +39,7 @@ export class PostsController {
     return this.postsService.findAll(page, search);
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.postsService.findOne(id);

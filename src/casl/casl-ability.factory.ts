@@ -30,15 +30,26 @@ export class CaslAbilityFactory {
         if (user.role === UserRole.USER) {
             // console.log("role is user", user.id);
             can(Action.Read, 'User', { id: user.id });
+            can(Action.Update, 'User', { id: user.id });
+            can(Action.Delete, 'User', { id: user.id });
             can(Action.Update, 'Post', { userId: user.id });
+            can(Action.Delete, 'Post', { userId: user.id });
+            can(Action.Update, 'Community', { userId: user.id });
+            can(Action.Delete, 'Community', { userId: user.id });
+            can(Action.Update, 'Comment', { userId: user.id });
+            can(Action.Delete, 'Comment', { userId: user.id });
+            can(Action.Update, 'Vote', { userId: user.id });
+            can(Action.Delete, 'Vote', { userId: user.id });
+            can(Action.Update, 'Subscription', { userId: user.id });
+            can(Action.Delete, 'Subscription', { userId: user.id });
+            can(Action.Update, 'SavedPost', { userId: user.id });
+            can(Action.Delete, 'SavedPost', { userId: user.id });
         }
 
         if (user.role === UserRole.ADMIN) {
             // console.log("role is admin", user.id);
-            can('manage', 'all');
+            can(Action.Manage, 'all');
         }
-
-        cannot('delete', 'Community', { isDeleted: true });
 
         return build({
             detectSubjectType: item => item.constructor as ExtractSubjectType<Subjects<any>>,

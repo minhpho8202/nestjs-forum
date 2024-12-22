@@ -6,6 +6,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RegisterDTO } from './dto/register.dto';
 import { LoginDTO } from './dto/login.dto';
+import { use } from 'passport';
 
 @Injectable()
 export class AuthService {
@@ -80,6 +81,15 @@ export class AuthService {
                     username: loginDTO.username,
                     isActived: true,
                     isDeleted: false,
+                },
+                select: {
+                    id: true,
+                    username: true,
+                    password: true,
+                    email: true,
+                    profilePicture: true,
+                    bio: true,
+                    role: true,
                 }
             });
 
@@ -95,7 +105,14 @@ export class AuthService {
 
             const payload = { id: user.id, email: user.email, role: user.role };
 
-            return await this.generateToken(payload);
+            delete user.password;
+
+            const tokens = await this.generateToken(payload);
+
+            return {
+                user,
+                tokens
+            }
         } catch (error) {
             throw error;
         }
@@ -106,7 +123,7 @@ export class AuthService {
             const accessToken = await this.jwtService.signAsync(payload,
                 {
                     secret: this.configService.get('ACCESS_TOKEN_SECRET'),
-                    expiresIn: '99d',
+                    expiresIn: this.configService.get('ACCESS_TOKEN_EXPIRES_IN'),
                 });
             const refreshToken = await this.jwtService.signAsync({
                 id: payload.id,
@@ -115,7 +132,7 @@ export class AuthService {
             },
                 {
                     secret: this.configService.get('REFRESH_TOKEN_SECRET'),
-                    expiresIn: '7d',
+                    expiresIn: this.configService.get('REFRESH_TOKEN_EXPIRES_IN'),
                 },);
 
             await this.prismaService.user.update({
@@ -123,7 +140,12 @@ export class AuthService {
                 data: { refreshToken: refreshToken },
             });
 
-            return { accessToken, refreshToken };
+            return {
+                accessToken,
+                accessTokenExpiresIn: parseInt(this.configService.get('ACCESS_TOKEN_EXPIRES_IN'), 10),
+                refreshToken,
+                refreshTokenExpiresIn: parseInt(this.configService.get('REFRESH_TOKEN_EXPIRES_IN'), 10)
+            };
         } catch (error) {
             throw error;
         }

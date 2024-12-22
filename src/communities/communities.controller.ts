@@ -5,6 +5,7 @@ import { UpdateCommunityDto } from './dto/update-community.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
 import { User } from 'src/common/decorators/user.decorator';
 import { CommonService } from 'src/common/services/common.service';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @Controller('communities')
 export class CommunitiesController {
@@ -14,9 +15,11 @@ export class CommunitiesController {
 
   @Post()
   create(@Body() createCommunityDto: CreateCommunityDto, @User() user: any) {
-    return this.communitiesService.create(createCommunityDto, user.sub);
+    console.log(user);
+    return this.communitiesService.create(createCommunityDto, user.id);
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.communitiesService.findOne(id);

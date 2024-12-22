@@ -10,7 +10,9 @@ export class CommunitiesService {
   async create(createCommunityDto: CreateCommunityDto, userId: number) {
 
     try {
-      const data = { ...createCommunityDto, creatorId: userId };
+      const data = { ...createCommunityDto, userId };
+
+      console.log(data);
 
       const community = await this.prismaService.community.create(
         {
@@ -19,7 +21,7 @@ export class CommunitiesService {
             id: true,
             description: true,
             createdAt: true,
-            creatorId: true
+            userId: true
           }
         }
       );

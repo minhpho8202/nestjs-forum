@@ -24,13 +24,14 @@ model User {
   isActived      Boolean            @default(true)
   refreshToken   String?
   role           UserRole           @default(USER)
-  communities    Community[]        @relation("Creator")
+  communities    Community[]        @relation("CommunityMemberships")
   posts          Post[]
   comments       Comment[]
   votes          Vote[]
   subscriptions  Subscription[]
   savedPosts     SavedPost[]
   notifications  UserNotification[]
+  Community      Community[]
 }
 
 model Community {
@@ -41,11 +42,24 @@ model Community {
   updatedAt         DateTime       @updatedAt
   isDeleted         Boolean        @default(false)
   isActived         Boolean        @default(true)
-  creatorId         Int
+  userId            Int
   subscriptionCount Int            @default(0)
-  creator           User           @relation("Creator", fields: [creatorId], references: [id])
+  user              User           @relation(fields: [userId], references: [id])
+  users             User[]         @relation("CommunityMemberships")
   posts             Post[]
   subscriptions     Subscription[]
+}
+
+model Subscription {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  communityId Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isDeleted   Boolean   @default(false)
+  isActived   Boolean   @default(true)
+  user        User      @relation(fields: [userId], references: [id])
+  community   Community @relation(fields: [communityId], references: [id])
 }
 
 model Post {
@@ -101,18 +115,6 @@ model Vote {
   user      User     @relation(fields: [userId], references: [id])
   post      Post?    @relation(fields: [postId], references: [id])
   comment   Comment? @relation(fields: [commentId], references: [id])
-}
-
-model Subscription {
-  id          Int       @id @default(autoincrement())
-  userId      Int
-  communityId Int
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  isDeleted   Boolean   @default(false)
-  isActived   Boolean   @default(true)
-  user        User      @relation(fields: [userId], references: [id])
-  community   Community @relation(fields: [communityId], references: [id])
 }
 
 model SavedPost {
