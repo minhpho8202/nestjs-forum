@@ -12,11 +12,11 @@ export class CreatePostDto {
     @Length(5, 1000)
     content: string;
 
-    @Transform(({ value }) => parseInt(value, 10))
-    @IsNotEmpty()
-    @IsInt()
-    @IsPositive()
-    communityId: number
+    // @Transform(({ value }) => parseInt(value, 10))
+    // @IsNotEmpty()
+    // @IsInt()
+    // @IsPositive()
+    // communityId: number
 
     @IsString()
     @IsOptional()

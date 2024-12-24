@@ -11,13 +11,13 @@ export class PostsService {
     private cloudinaryService: CloudinaryService,
   ) { }
 
-  async create(createPostDto: CreatePostDto, userId: number, images: Express.Multer.File[]) {
+  async create(createPostDto: CreatePostDto, userId: number, images: Express.Multer.File[], communityId: number) {
     try {
-      const data = { ...createPostDto, userId };
+      const data = { ...createPostDto, userId, communityId };
 
       let images_url = '';
 
-      if (images) {
+      if (images.length > 0) {
         if (images.length == 1) {
           console.log('Có 1 ảnh');
           const response = await this.cloudinaryService.uploadImage(images[0]);
@@ -55,6 +55,74 @@ export class PostsService {
       let condition: any = {
         isActived: true,
         isDeleted: false,
+      };
+
+      if (search) {
+        condition = {
+          ...condition,
+          OR: [
+            { title: { contains: search, mode: 'insensitive' } },
+            { content: { contains: search, mode: 'insensitive' } }
+          ]
+        };
+      }
+
+      const [posts, totalPosts] = await this.prismaService.$transaction([
+        this.prismaService.post.findMany({
+          where: condition,
+          select: {
+            id: true,
+            title: true,
+            content: true,
+            url: true,
+            userId: true,
+            imageUrl: true,
+            createdAt: true,
+            updatedAt: true,
+            upvotes: true,
+            downvotes: true,
+            communityId: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+                profilePicture: true,
+                bio: true,
+                role: true,
+              },
+            }
+          },
+          orderBy: [
+            { createdAt: 'desc' },
+            { updatedAt: 'desc' }
+          ],
+          skip,
+          take
+        }),
+
+        this.prismaService.post.count({
+          where: condition
+        })
+      ]);
+
+      const totalPages = Math.ceil(totalPosts / take);
+
+      return { posts, totalPages };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async findPostByCommunity(communityId: number, page: number = 1, search?: string) {
+    try {
+      const take = 2;
+      const skip = (page - 1) * take;
+
+      let condition: any = {
+        isActived: true,
+        isDeleted: false,
+        communityId
       };
 
       if (search) {

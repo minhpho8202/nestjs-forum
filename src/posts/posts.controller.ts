@@ -11,19 +11,19 @@ import { Action } from 'src/casl/action.enum';
 import { CommonService } from 'src/common/services/common.service';
 import { Public } from 'src/common/decorators/public.decorator';
 
-@Controller('posts')
+@Controller()
 export class PostsController {
   constructor(private readonly postsService: PostsService,
     private readonly commonService: CommonService
   ) { }
 
-  @Post()
+  @Post('communities/:communityId/posts')
   @UseInterceptors(FilesInterceptor('images', 2))
-  create(@UploadedFiles() images: Express.Multer.File[], @Body() createPostDto: CreatePostDto, @User() user: any) {
-    return this.postsService.create(createPostDto, user.id, images);
+  create(@UploadedFiles() images: Express.Multer.File[], @Body() createPostDto: CreatePostDto, @User() user: any, @Param('communityId', ParseIntPipe) communityId: number) {
+    return this.postsService.create(createPostDto, user.id, images, communityId);
   }
 
-  @Get()
+  @Get('posts')
   @ApiQuery({
     name: 'search',
     required: false,
@@ -33,31 +33,39 @@ export class PostsController {
     required: false,
   })
   @Public()
-  async findAll(
+  findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('search') search?: string) {
     return this.postsService.findAll(page, search);
   }
 
   @Public()
-  @Get(':id')
+  @Get('communities/:communityId/posts')
+  findPostByCommunity(@User() user: any, @Param('communityId', ParseIntPipe) communityId: number,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('search') search?: string) {
+    return this.postsService.findPostByCommunity(communityId, page, search)
+  }
+
+  @Public()
+  @Get('posts/:id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.postsService.findOne(id);
   }
 
-  @Patch(':id')
+  @Patch('posts/:id')
   @UseGuards(PoliciesGuard)
   @CheckPolicies((ability) => ability.can(Action.Update, 'Post'))
-  async update(@Param('id', ParseIntPipe) id: number, @Body() updatePostDto: UpdatePostDto, @User() user: any) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updatePostDto: UpdatePostDto, @User() user: any) {
     return this.postsService.update(id, updatePostDto, user.id);
   }
 
-  @Patch(':id/delete')
+  @Patch('posts/:id/delete')
   toggleDeleteStatus(@Param('id', ParseIntPipe) id: number) {
     return this.commonService.toggleStatus(id, 'post', 'isDeleted');
   }
 
-  @Patch(':id/active')
+  @Patch('posts/:id/active')
   toggleActiveStatus(@Param('id', ParseIntPipe) id: number) {
     return this.commonService.toggleStatus(id, 'post', 'isActived');
   }

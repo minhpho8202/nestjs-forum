@@ -1,18 +1,19 @@
-import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as argon from 'argon2';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RegisterDTO } from './dto/register.dto';
 import { LoginDTO } from './dto/login.dto';
-import { use } from 'passport';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 
 @Injectable()
 export class AuthService {
     constructor(private prismaService: PrismaService,
         private jwtService: JwtService,
         private configService: ConfigService,
+        @Inject(CACHE_MANAGER) private cacheManager: Cache
     ) { }
     async register(registerDTO: RegisterDTO) {
         try {
@@ -103,11 +104,9 @@ export class AuthService {
                 throw new BadRequestException('Invalid username or password');
             }
 
-            const payload = { id: user.id, email: user.email, role: user.role };
-
             delete user.password;
 
-            const tokens = await this.generateToken(payload);
+            const tokens = await this.generateToken(user);
 
             return {
                 user,
@@ -118,13 +117,16 @@ export class AuthService {
         }
     }
 
-    async generateToken(payload: { id: number, email: string, role: string }) {
+    async generateToken(user: any) {
         try {
+            const payload = { id: user.id, email: user.email, role: user.role };
+
             const accessToken = await this.jwtService.signAsync(payload,
                 {
                     secret: this.configService.get('ACCESS_TOKEN_SECRET'),
                     expiresIn: this.configService.get('ACCESS_TOKEN_EXPIRES_IN'),
                 });
+
             const refreshToken = await this.jwtService.signAsync({
                 id: payload.id,
                 email: payload.email,
@@ -135,10 +137,9 @@ export class AuthService {
                     expiresIn: this.configService.get('REFRESH_TOKEN_EXPIRES_IN'),
                 },);
 
-            await this.prismaService.user.update({
-                where: { email: payload.email },
-                data: { refreshToken: refreshToken },
-            });
+            const key = `user_${user.id}`;
+            const value = { ...user, refreshToken: refreshToken };
+            await this.cacheManager.set(key, value, this.configService.get('REFRESH_TOKEN_EXPIRES_IN_CACHE'));
 
             return {
                 accessToken,
@@ -156,15 +157,15 @@ export class AuthService {
             const verify = await this.jwtService.verifyAsync(refreshToken, {
                 secret: this.configService.get('REFRESH_TOKEN_SECRET')
             })
-            const checkExistToken = await this.prismaService.user.findUnique(
-                {
-                    where: {
-                        email: verify.email, refreshToken
-                    }
-                }
-            )
-            if (checkExistToken) {
-                return this.generateToken({ id: verify.id, email: verify.email, role: verify.role });
+
+            const key = `user_${verify.id}`;
+
+            const checkExistToken: any = await this.cacheManager.get(key);
+            if (!checkExistToken) {
+                throw new UnauthorizedException('Refresh token is not valid');
+            }
+            if (checkExistToken.refreshToken === refreshToken) {
+                return this.generateToken(checkExistToken);
             } else {
                 throw new UnauthorizedException('Refresh token is not valid');
             }
