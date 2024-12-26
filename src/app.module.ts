@@ -13,6 +13,9 @@ import { SavedPostsModule } from './saved-posts/saved-posts.module';
 import { VotesModule } from './votes/votes.module';
 import { AuthGoogleModule } from './auth-google/auth-google.module';
 import { CacheModule } from '@nestjs/cache-manager';
+import { MyLoggerModule } from './my-logger/my-logger.module';
+import { AllExceptionsFilter } from './common/exceptions/all-exceptions.filter';
+import { MyLoggerService } from './my-logger/my-logger.service';
 
 @Module({
   imports: [AuthModule,
@@ -33,6 +36,7 @@ import { CacheModule } from '@nestjs/cache-manager';
     CacheModule.register({
       isGlobal: true,
     }),
+    MyLoggerModule,
   ],
   controllers: [],
   providers: [],

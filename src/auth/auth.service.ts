@@ -171,7 +171,10 @@ export class AuthService {
             }
 
         } catch (error) {
-            throw error;
+            if (error.name === 'TokenExpiredError') {
+                throw new UnauthorizedException('Refresh token has expired');
+            }
+            throw new UnauthorizedException('Refresh token is not valid');
         }
     }
 }
