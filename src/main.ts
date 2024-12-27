@@ -2,7 +2,7 @@ import { HttpAdapterHost, NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { AllExceptionsFilter } from './common/exceptions/all-exceptions.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { MyLoggerService } from './my-logger/my-logger.service';
 
 async function bootstrap() {

@@ -23,14 +23,16 @@ export class MyLoggerService extends ConsoleLogger {
     }
 
     log(message: any, context?: string) {
-        const entry = `${context}\t${message}`;
+        const formattedMessage = typeof message === 'object' ? JSON.stringify(message) : message;
+        const entry = `${context}\t${formattedMessage}`;
         this.logToFile(entry);
-        super.log(message, context);
+        super.log(formattedMessage, context);
     }
 
     error(message: any, stackOrContext?: string) {
-        const entry = `${stackOrContext}\t${message}`;
+        const formattedMessage = typeof message === 'object' ? JSON.stringify(message) : message;
+        const entry = `${stackOrContext}\t${formattedMessage}`;
         this.logToFile(entry);
-        super.error(message, stackOrContext);
+        super.error(formattedMessage, stackOrContext);
     }
 }
