@@ -48,7 +48,7 @@ export class AllExceptionsFilter extends BaseExceptionFilter {
             .json(myResponseObj);
 
         this.logger.error(
-            `${myResponseObj.message} - Path: ${request.url}`,
+            `${myResponseObj.message} - Method: ${request.method} - Path: ${request.url}`,
             AllExceptionsFilter.name
         );
 

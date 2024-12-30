@@ -7,72 +7,161 @@ import { RegisterDTO } from './dto/register.dto';
 import { LoginDTO } from './dto/login.dto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
+import { MailerService } from '@nestjs-modules/mailer';
 
 @Injectable()
 export class AuthService {
     constructor(private prismaService: PrismaService,
         private jwtService: JwtService,
         private configService: ConfigService,
-        @Inject(CACHE_MANAGER) private cacheManager: Cache
+        @Inject(CACHE_MANAGER) private cacheManager: Cache,
+        private mailerService: MailerService,
     ) { }
+    // async register(registerDTO: RegisterDTO) {
+    //     try {
+    //         if (registerDTO.password !== registerDTO.confirmPassword) {
+    //             throw new BadRequestException('Password and confirm password do not match.');
+    //         }
+
+    //         const existingUserEmail = await this.prismaService.user.findFirst({ where: { email: registerDTO.email } });
+    //         const existingUserUsername = await this.prismaService.user.findFirst({ where: { username: registerDTO.username } });
+
+    //         const hash = await argon.hash(registerDTO.password);
+
+    //         if (!existingUserEmail && !existingUserUsername) {
+    //             const user = await this.prismaService.user.create({
+    //                 data: {
+    //                     username: registerDTO.username,
+    //                     password: hash,
+    //                     email: registerDTO.email,
+    //                 },
+    //                 select: {
+    //                     id: true,
+    //                     username: true,
+    //                     email: true,
+    //                     profilePicture: true,
+    //                     bio: true,
+    //                     role: true,
+    //                 },
+    //             });
+
+    //             return user;
+    //         }
+
+    //         if (existingUserEmail && existingUserEmail.username) {
+    //             throw new ConflictException('Email already exists');
+    //         }
+
+
+    //         if (existingUserUsername) {
+    //             throw new ConflictException('Username already exists');
+    //         }
+
+    //         const user = await this.prismaService.user.update({
+    //             where: { email: registerDTO.email },
+    //             data: {
+    //                 username: registerDTO.username,
+    //                 password: hash,
+    //             },
+    //             select: {
+    //                 id: true,
+    //                 username: true,
+    //                 email: true,
+    //                 profilePicture: true,
+    //                 bio: true,
+    //                 role: true,
+    //             },
+    //         });
+
+    //         return user;
+
+
+    //     } catch (error) {
+    //         throw error;
+    //     }
+    // }
+
     async register(registerDTO: RegisterDTO) {
-        try {
-            const existingUserEmail = await this.prismaService.user.findFirst({ where: { email: registerDTO.email } });
-            const existingUserUsername = await this.prismaService.user.findFirst({ where: { username: registerDTO.username } });
+        if (registerDTO.password !== registerDTO.confirmPassword) {
+            throw new BadRequestException('Password and confirm password do not match.');
+        }
 
-            const hash = await argon.hash(registerDTO.password);
+        const existingUserEmail = await this.prismaService.user.findFirst({ where: { email: registerDTO.email } });
+        const existingUserUsername = await this.prismaService.user.findFirst({ where: { username: registerDTO.username } });
 
-            if (!existingUserEmail && !existingUserUsername) {
-                const user = await this.prismaService.user.create({
-                    data: {
-                        username: registerDTO.username,
-                        password: hash,
-                        email: registerDTO.email,
-                    },
-                    select: {
-                        id: true,
-                        username: true,
-                        email: true,
-                        profilePicture: true,
-                        bio: true,
-                        role: true,
-                    },
-                });
+        if (existingUserUsername) {
+            throw new ConflictException('Username already exists');
+        }
 
-                return user;
-            }
+        if (existingUserEmail && existingUserEmail.username) {
+            throw new ConflictException('Email already exists');
+        }
 
-            if (existingUserEmail && existingUserEmail.username) {
-                throw new ConflictException('Email already exists');
-            }
+        const hashedPassword = await argon.hash(registerDTO.password);
 
+        const payload = { email: registerDTO.email, username: registerDTO.username, password: hashedPassword };
 
-            if (existingUserUsername) {
-                throw new ConflictException('Username already exists');
-            }
+        const token = await this.jwtService.signAsync(payload,
+            {
+                secret: this.configService.get('REGISTER_TOKEN_SECRET'),
+                expiresIn: this.configService.get('REGISTER_TOKEN_EXPIRES_IN'),
+            },);
 
-            const user = await this.prismaService.user.update({
-                where: { email: registerDTO.email },
+        const key = `register_${token}`;
+
+        await this.cacheManager.set(key, payload, this.configService.get('REGISTER_TOKEN_EXPIRES_IN_CACHE'));
+
+        const confirmationUrl = `${this.configService.get('URL')}auth/confirm?token=${token}`;
+        await this.mailerService.sendMail({
+            to: registerDTO.email,
+            subject: 'Confirm Your Email',
+            html: `<p style="font-size: 16px; line-height: 1.5; color: #333;">
+                    Click <a href="${confirmationUrl}" style="color: #007bff; text-decoration: none; font-weight: bold;">here</a> to confirm your email.
+                    </p>`,
+        });
+
+        return { message: 'Registration successful. Please check your email for confirmation.' };
+    }
+
+    async confirmEmail(token: string) {
+        const key = `register_${token}`;
+
+        const cachedData = await this.cacheManager.get(key);
+
+        if (!cachedData) {
+            throw new BadRequestException('Invalid or expired token');
+        }
+
+        const payload = await this.jwtService.verifyAsync(token, {
+            secret: this.configService.get('REGISTER_TOKEN_SECRET')
+        })
+
+        const user = await this.prismaService.user.findFirst({ where: { email: payload.email } });
+
+        if (!user) {
+            await this.prismaService.user.create({
                 data: {
-                    username: registerDTO.username,
-                    password: hash,
-                },
-                select: {
-                    id: true,
-                    username: true,
-                    email: true,
-                    profilePicture: true,
-                    bio: true,
-                    role: true,
+                    username: payload.username,
+                    password: payload.password,
+                    email: payload.email
                 },
             });
-
-            return user;
-
-
-        } catch (error) {
-            throw error;
+        } else {
+            await this.prismaService.user.update({
+                where: {
+                    email: payload.email
+                },
+                data: {
+                    username: payload.username,
+                    password: payload.password,
+                },
+            });
         }
+
+
+        await this.cacheManager.del(key);
+
+        return { message: 'Email confirmed and account created successfully.' };
     }
 
     async login(loginDTO: LoginDTO) {

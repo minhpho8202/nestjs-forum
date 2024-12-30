@@ -9,6 +9,10 @@ export class RegisterDTO {
     @IsString()
     password: string;
 
+    @IsNotEmpty()
+    @IsString()
+    confirmPassword: string;
+
     @IsEmail()
     @IsNotEmpty()
     email: string;
