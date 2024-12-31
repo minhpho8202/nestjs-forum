@@ -3,6 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterDTO } from './dto/register.dto';
 import { LoginDTO } from './dto/login.dto';
 import { Public } from 'src/common/decorators/public.decorator';
+import { ResetPasswordDTO } from './dto/reset-password.dto';
 
 @Public()
 @Controller('auth')
@@ -17,6 +18,16 @@ export class AuthController {
   @Get('confirm')
   async confirm(@Query('token') token: string) {
     return this.authService.confirmEmail(token);
+  }
+
+  @Post('forget-password')
+  async forgetPassword(@Body('email') email: string) {
+    return await this.authService.forgetPassword(email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() resetPasswordDTO: ResetPasswordDTO) {
+    return await this.authService.resetPassword(resetPasswordDTO);
   }
 
   @Post('login')

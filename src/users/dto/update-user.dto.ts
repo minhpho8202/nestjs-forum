@@ -13,6 +13,9 @@ export class UpdateUserDTO {
     newPassword?: string;
 
     @IsOptional()
+    confirmPassword?: string;
+
+    @IsOptional()
     profilePicture?: string;
 
     @IsOptional()

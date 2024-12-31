@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, HttpException, HttpStatus, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateUserDTO } from './dto/update-user.dto';
 import * as argon from 'argon2';
@@ -55,6 +55,9 @@ export class UsersService {
             }
 
             if (updateUserDTO.newPassword) {
+                if (updateUserDTO.newPassword !== updateUserDTO.confirmPassword) {
+                    throw new BadRequestException('Password and confirm password do not match.');
+                }
                 const checkPassword = await argon.verify(user.password, updateUserDTO.password);
                 if (!checkPassword) {
                     throw new UnauthorizedException('Invalid password');
