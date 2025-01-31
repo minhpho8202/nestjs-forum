@@ -33,12 +33,12 @@ export class VotesService {
         if (postId) {
           await this.prismaService.post.update({
             where: { id: postId },
-            data: voteType === 1 ? { upvotes: { decrement: 1 } } : { downvotes: { decrement: 1 } },
+            data: voteType === 1 ? { voteCount: { decrement: 1 } } : { voteCount: { decrement: 1 } },
           });
         } else if (commentId) {
           await this.prismaService.comment.update({
             where: { id: commentId },
-            data: voteType === 1 ? { upvotes: { decrement: 1 } } : { downvotes: { decrement: 1 } },
+            data: voteType === 1 ? { voteCount: { decrement: 1 } } : { voteCount: { decrement: 1 } },
           });
         }
 
@@ -56,12 +56,12 @@ export class VotesService {
         if (postId) {
           await this.prismaService.post.update({
             where: { id: postId },
-            data: voteType === 1 ? { upvotes: { increment: 1 } } : { downvotes: { increment: 1 } },
+            data: voteType === 1 ? { voteCount: { increment: 1 } } : { voteCount: { increment: 1 } },
           });
         } else if (commentId) {
           await this.prismaService.comment.update({
             where: { id: commentId },
-            data: voteType === 1 ? { upvotes: { increment: 1 } } : { downvotes: { increment: 1 } },
+            data: voteType === 1 ? { voteCount: { increment: 1 } } : { voteCount: { increment: 1 } },
           });
         }
 

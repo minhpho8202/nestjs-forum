@@ -23,29 +23,42 @@ export class AuthGuard implements CanActivate {
             return true;
         }
 
+        // Lấy request từ context
         const request = context.switchToHttp().getRequest();
-        const token = this.extractTokenFromHeader(request);
+        const token = this.extractToken(request);
 
         if (!token) {
-            throw new UnauthorizedException();
+            throw new UnauthorizedException('Token not provided');
         }
+
         try {
-            const payload = await this.jwtService.verifyAsync(
-                token,
-                {
-                    secret: this.configService.get('ACCESS_TOKEN_SECRET')
-                }
-            );
-            // payload.id = 2;
+            // Xác minh token JWT
+            const payload = await this.jwtService.verifyAsync(token, {
+                secret: this.configService.get('ACCESS_TOKEN_SECRET'),
+            });
+
+            // Gắn payload vào request.user
             request['user'] = payload;
-        } catch {
-            throw new UnauthorizedException();
+        } catch (err) {
+            throw new UnauthorizedException('Invalid or expired token');
         }
         return true;
     }
 
-    private extractTokenFromHeader(request: Request): string | undefined {
-        const [type, token] = request.headers.authorization?.split(' ') ?? [];
-        return type === 'Bearer' ? token : undefined;
+    private extractToken(request: Request): string | undefined {
+        const authHeader = request.headers.authorization;
+        if (authHeader) {
+            const [type, token] = authHeader.split(' ');
+            if (type === 'Bearer' && token) {
+                return token;
+            }
+        }
+        console.log(request.cookies['at']);
+
+        if (request.cookies && request.cookies['at']) {
+            return request.cookies['at'];
+        }
+
+        return undefined;
     }
 }

@@ -12,30 +12,35 @@ export class PostsService {
   ) { }
 
   async create(createPostDto: CreatePostDto, userId: number, images: Express.Multer.File[], communityId: number) {
+    let imagePublicId: string[] = [];
     try {
       const data = { ...createPostDto, userId, communityId };
+      let images_url: string[] = [];
 
-      let images_url = '';
-
-      if (images.length > 0) {
-        if (images.length == 1) {
+      if (images && images.length > 0) {
+        if (images.length === 1) {
           console.log('Có 1 ảnh');
           const response = await this.cloudinaryService.uploadImage(images[0]);
-          images_url = response.secure_url;
+          images_url.push(response.secure_url);
+          imagePublicId.push(response.public_id);
         } else {
           console.log('Có nhiều ảnh');
-          const response = await this.cloudinaryService.uploadImages(images);
-          images_url = response.toString();
+          const uploadPromises = images.map((image) =>
+            this.cloudinaryService.uploadImage(image).then((response) => {
+              images_url.push(response.secure_url);
+              imagePublicId.push(response.public_id);
+            })
+          );
+
+          await Promise.all(uploadPromises);
         }
       }
 
-      if (images_url) {
-        data.imageUrl = images_url;
+      if (images_url.length > 0) {
+        data.imageUrl = images_url.join(',');
       }
 
-      console.log(data);
-
-      const post = await this.prismaService.post.create({ data: data });
+      const post = await this.prismaService.post.create({ data });
 
       delete post.updatedAt;
       delete post.isDeleted;
@@ -43,6 +48,7 @@ export class PostsService {
 
       return post;
     } catch (error) {
+      await Promise.all(imagePublicId.map((publicId) => this.cloudinaryService.deleteImage(publicId)));
       throw error;
     }
   }
@@ -79,8 +85,7 @@ export class PostsService {
             imageUrl: true,
             createdAt: true,
             updatedAt: true,
-            upvotes: true,
-            downvotes: true,
+            voteCount: true,
             communityId: true,
             user: {
               select: {
@@ -91,6 +96,11 @@ export class PostsService {
                 bio: true,
                 role: true,
               },
+            },
+            community: {
+              select: {
+                name: true
+              }
             }
           },
           orderBy: [
@@ -147,8 +157,7 @@ export class PostsService {
             imageUrl: true,
             createdAt: true,
             updatedAt: true,
-            upvotes: true,
-            downvotes: true,
+            voteCount: true,
             communityId: true,
             user: {
               select: {
@@ -159,6 +168,11 @@ export class PostsService {
                 bio: true,
                 role: true,
               },
+            },
+            community: {
+              select: {
+                name: true
+              }
             }
           },
           orderBy: [
@@ -226,8 +240,7 @@ export class PostsService {
           imageUrl: true,
           createdAt: true,
           updatedAt: true,
-          upvotes: true,
-          downvotes: true,
+          voteCount: true,
           communityId: true,
         },
       })

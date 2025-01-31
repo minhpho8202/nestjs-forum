@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateCommunityDto } from './dto/create-community.dto';
 import { UpdateCommunityDto } from './dto/update-community.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -10,6 +10,14 @@ export class CommunitiesService {
   async create(createCommunityDto: CreateCommunityDto, userId: number) {
 
     try {
+      const check = await this.prismaService.community.findFirst({
+        where: {
+          name: createCommunityDto.name
+        }
+      });
+      if (check) {
+        throw new ConflictException('Community already exists');
+      }
       const data = { ...createCommunityDto, userId };
 
       console.log(data);
@@ -37,15 +45,23 @@ export class CommunitiesService {
       const community = await this.prismaService.community.findFirst(
         {
           where: { id, isActived: true, isDeleted: false },
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            createdAt: true,
+            subscriptionCount: true,
+            user: {
+              select: {
+                username: true
+              }
+            }
+          }
         }
       );
       if (!community) {
         throw new NotFoundException("Community not found");
       }
-
-      delete community.isActived;
-      delete community.updatedAt;
-      delete community.isDeleted;
 
       return community;
     } catch (error) {

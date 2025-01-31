@@ -136,4 +136,30 @@ export class UsersService {
         }
     }
 
+    async getFollowingCommunities(id: number) {
+        try {
+            const user = await this.prismaService.user.findUnique({
+                where: { id },
+                select: {
+                    subscriptions: {
+                        select: {
+                            community: {
+                                select: {
+                                    id: true,
+                                    name: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            const communities = user.subscriptions.map((sub) => sub.community);
+
+            return communities;
+        } catch (error) {
+            throw error;
+        }
+    }
+
 }

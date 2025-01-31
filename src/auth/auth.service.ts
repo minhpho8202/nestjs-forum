@@ -9,6 +9,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ResetPasswordDTO } from './dto/reset-password.dto';
+import { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -128,7 +129,7 @@ export class AuthService {
         }
     }
 
-    async confirmEmail(token: string) {
+    async confirmEmail(token: string, res: Response) {
         try {
             // const key = `register_${token}`;
 
@@ -163,11 +164,11 @@ export class AuthService {
                     },
                 });
             }
-
+            return res.redirect(`${this.configService.get('FE_URL')}login`);
 
             // await this.cacheManager.del(key);
 
-            return { message: 'Email confirmed and account created successfully.' };
+            // return { message: 'Email confirmed and account created successfully.' };
         } catch (error) {
             if (error.name === 'TokenExpiredError') {
                 throw new UnauthorizedException('Token has expired');

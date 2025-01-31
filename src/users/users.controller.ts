@@ -32,6 +32,11 @@ export class UsersController {
     return this.usersService.findAll(page, search);
   }
 
+  @Get('following-comunnities')
+  getFollowingCommunities(@User() user: any) {
+    return this.usersService.getFollowingCommunities(user.id);
+  }
+
   @Patch()
   @UseInterceptors(FileInterceptor('image'))
   async update(@UploadedFile() image: Express.Multer.File, @User() user: any, @Body() updateUserDTO: UpdateUserDTO) {
@@ -48,6 +53,5 @@ export class UsersController {
   toggleDeleteStatus(@User() user: any) {
     return this.commonService.toggleStatus(user.id, 'user', 'isDeleted');
   }
-
 
 }
